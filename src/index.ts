@@ -43,7 +43,6 @@ const joinExistingGame = async (id: string) => {
 };
 
 const play = (gameState: SharedMap) => {
-  console.clear();
   for (const [key, value] of gameState) {
     console.log(key, value);
   }
@@ -68,7 +67,7 @@ const play = (gameState: SharedMap) => {
 
   gameState.on('valueChanged', (ivc) => {
     console.clear();
-    for (const [key, value] of gameState) {
+    for (const [key, value] of gameState.entries()) {
       console.log((ivc.key === key ? '*' : '') + key, value);
     }
   });
