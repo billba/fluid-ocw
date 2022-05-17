@@ -5,12 +5,14 @@ import { SharedMap } from "fluid-framework";
 import {AzureClient} from '@fluidframework/azure-client';
 import {InsecureTokenProvider} from '@fluidframework/test-client-utils';
 
+const id = process.env.FR_USER_ID || os.userInfo().username;
+
 const serviceConfig = {
   connection: {
     tenantId: process.env.FR_TENANT!,
     tokenProvider: new InsecureTokenProvider(
-        process.env.FR_PRIMARY_KEY!,
-      {id: process.env.FR_USER_ID || os.userInfo().username}
+      process.env.FR_PRIMARY_KEY!,
+      {id}
     ),
     orderer: process.env.FR_ORDERER!,
     storage: process.env.FR_STORAGE!,
@@ -59,12 +61,12 @@ const play = (gameState: SharedMap) => {
         console.log('EXIT');
         process.exit();
       } else {
-        gameState.set(GameStateKeys.lastChar, key);
+        gameState.set(GameStateKeys.lastChar, `${id} pressed '${key}'`);
       }
     });
 
     gameState.on('valueChanged', () => {
-      console.log("last key pressed: ", gameState.get(GameStateKeys.lastChar));
+      console.log(gameState.get(GameStateKeys.lastChar));
     });
 }
 
