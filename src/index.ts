@@ -44,7 +44,7 @@ const joinExistingGame = async (id: string) => {
 }
 
 const play = (gameState: SharedMap) => {
-    console.log("render game");
+    console.log('initial value', gameState.get(GameStateKeys.lastChar));
 
     const stdin = process.stdin;
     stdin.setRawMode(true);
