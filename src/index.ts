@@ -18,9 +18,9 @@ const serviceConfig = {
 
 const client = new AzureClient(serviceConfig);
 
-enum GameStateKeys {
-  lastChar = 'lastChar',
-}
+// enum GameStateKeys {
+//   lastChar = 'lastChar',
+// }
 
 const containerSchema = {
   initialObjects: {gameState: SharedMap},
@@ -29,7 +29,7 @@ const containerSchema = {
 const createNewGame = async () => {
   const {container} = await client.createContainer(containerSchema);
   const gameState = container.initialObjects.gameState as SharedMap;
-  gameState.set(GameStateKeys.lastChar, 'none');
+  // gameState.set(, 'none');
   const id = await container.attach();
   console.log('Starting game ' + id);
   play(gameState);
@@ -43,7 +43,10 @@ const joinExistingGame = async (id: string) => {
 };
 
 const play = (gameState: SharedMap) => {
-  console.log('initial value', gameState.get(GameStateKeys.lastChar));
+  console.clear();
+  for (const [key, value] of gameState) {
+    console.log(key, value);
+  }
 
   const stdin = process.stdin;
   stdin.setRawMode(true);
@@ -59,12 +62,15 @@ const play = (gameState: SharedMap) => {
       // eslint-disable-next-line no-process-exit
       process.exit();
     } else {
-      gameState.set(GameStateKeys.lastChar, `${id} pressed '${key}'`);
+      gameState.set(id, key);
     }
   });
 
-  gameState.on('valueChanged', () => {
-    console.log(gameState.get(GameStateKeys.lastChar));
+  gameState.on('valueChanged', (ivc) => {
+    console.clear();
+    for (const [key, value] of gameState) {
+      console.log((ivc.key === key ? '*' : '') + key, value);
+    }
   });
 };
 
