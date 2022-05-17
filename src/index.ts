@@ -19,37 +19,35 @@ const serviceConfig = {
 const client = new AzureClient(serviceConfig);
 
 interface InitialObjects {
+  pile: SharedString;
   gameState: SharedMap;
-  someText: SharedString;
 }
 
 const containerSchema = {
   initialObjects: {
+    pile: SharedString,
     gameState: SharedMap,
-    someText: SharedString,
   },
 };
 
 const createNewGame = async () => {
   const {container} = await client.createContainer(containerSchema);
-  const {gameState, someText} =
-    container.initialObjects as unknown as InitialObjects;
+  const initialObjects = container.initialObjects as unknown as InitialObjects;
   const containerId = await container.attach();
   console.log('Starting game ' + containerId);
-  play(gameState, someText);
+  initialObjects.pile.insertText(0, 'this is a pile');
+  play(initialObjects);
   return containerId;
 };
 
 const joinExistingGame = async (containerId: string) => {
   console.log('Joining game ' + containerId);
   const {container} = await client.getContainer(containerId, containerSchema);
-  play(
-    container.initialObjects.gameState as SharedMap,
-    container.initialObjects.sharedText as SharedString
-  );
+  const initialObjects = container.initialObjects as unknown as InitialObjects;
+  play(initialObjects);
 };
 
-const play = (gameState: SharedMap, someText: SharedString) => {
+const play = ({gameState, pile}: InitialObjects) => {
   for (const [key, value] of gameState) {
     console.log(key, value);
   }
@@ -68,14 +66,13 @@ const play = (gameState: SharedMap, someText: SharedString) => {
       // eslint-disable-next-line no-process-exit
       process.exit();
     } else {
-      someText.insertText(0, key);
       gameState.set(id, key);
     }
   });
 
   gameState.on('valueChanged', ivc => {
     console.clear();
-    console.log(someText.getText());
+    console.log(pile);
     for (const [key, value] of gameState.entries()) {
       console.log((ivc.key === key ? '*' : '') + key, value);
     }
