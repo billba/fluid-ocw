@@ -1,7 +1,7 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 import os from 'os';
-import {SharedMap} from 'fluid-framework';
+import {SharedMap, SharedString} from 'fluid-framework';
 import {AzureClient} from '@fluidframework/azure-client';
 import {InsecureTokenProvider} from '@fluidframework/test-client-utils';
 
@@ -22,27 +22,34 @@ const client = new AzureClient(serviceConfig);
 //   lastChar = 'lastChar',
 // }
 
+interface InitialObjects {
+  gameState: SharedMap,
+  someText: SharedString,
+}
+
 const containerSchema = {
-  initialObjects: {gameState: SharedMap},
+  initialObjects: {
+    gameState: SharedMap,
+    someText: SharedString,
+  },
 };
 
 const createNewGame = async () => {
   const {container} = await client.createContainer(containerSchema);
-  const gameState = container.initialObjects.gameState as SharedMap;
-  // gameState.set(, 'none');
+  const {gameState, someText} = container.initialObjects as unknown as InitialObjects;
   const id = await container.attach();
   console.log('Starting game ' + id);
-  play(gameState);
+  play(gameState, someText);
   return id;
 };
 
 const joinExistingGame = async (id: string) => {
   console.log('Joining game ' + id);
   const {container} = await client.getContainer(id, containerSchema);
-  play(container.initialObjects.gameState as SharedMap);
+  play(container.initialObjects.gameState as SharedMap, container.initialObjects.sharedText as SharedString);
 };
 
-const play = (gameState: SharedMap) => {
+const play = (gameState: SharedMap, someText: SharedString) => {
   for (const [key, value] of gameState) {
     console.log(key, value);
   }
@@ -61,12 +68,14 @@ const play = (gameState: SharedMap) => {
       // eslint-disable-next-line no-process-exit
       process.exit();
     } else {
+      someText.insertText(0, key);
       gameState.set(id, key);
     }
   });
 
   gameState.on('valueChanged', ivc => {
     console.clear();
+    console.log(someText.getText());
     for (const [key, value] of gameState.entries()) {
       console.log((ivc.key === key ? '*' : '') + key, value);
     }
