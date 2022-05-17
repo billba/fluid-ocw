@@ -18,13 +18,9 @@ const serviceConfig = {
 
 const client = new AzureClient(serviceConfig);
 
-// enum GameStateKeys {
-//   lastChar = 'lastChar',
-// }
-
 interface InitialObjects {
-  gameState: SharedMap,
-  someText: SharedString,
+  gameState: SharedMap;
+  someText: SharedString;
 }
 
 const containerSchema = {
@@ -36,17 +32,21 @@ const containerSchema = {
 
 const createNewGame = async () => {
   const {container} = await client.createContainer(containerSchema);
-  const {gameState, someText} = container.initialObjects as unknown as InitialObjects;
-  const id = await container.attach();
-  console.log('Starting game ' + id);
+  const {gameState, someText} =
+    container.initialObjects as unknown as InitialObjects;
+  const containerId = await container.attach();
+  console.log('Starting game ' + containerId);
   play(gameState, someText);
-  return id;
+  return containerId;
 };
 
-const joinExistingGame = async (id: string) => {
-  console.log('Joining game ' + id);
-  const {container} = await client.getContainer(id, containerSchema);
-  play(container.initialObjects.gameState as SharedMap, container.initialObjects.sharedText as SharedString);
+const joinExistingGame = async (containerId: string) => {
+  console.log('Joining game ' + containerId);
+  const {container} = await client.getContainer(containerId, containerSchema);
+  play(
+    container.initialObjects.gameState as SharedMap,
+    container.initialObjects.sharedText as SharedString
+  );
 };
 
 const play = (gameState: SharedMap, someText: SharedString) => {
@@ -83,9 +83,9 @@ const play = (gameState: SharedMap, someText: SharedString) => {
 };
 
 const start = async () => {
-  const id = process.argv[2];
-  if (id) {
-    await joinExistingGame(id);
+  const containerId = process.argv[2];
+  if (containerId) {
+    await joinExistingGame(containerId);
   } else {
     await createNewGame();
   }
