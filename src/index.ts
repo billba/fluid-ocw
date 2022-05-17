@@ -19,26 +19,55 @@ const serviceConfig = {
 
 const client = new AzureClient(serviceConfig);
 
-const diceValueKey = "dice-value-key";
+enum GameStateKeys {
+  lastChar = "lastChar",
+}
+
 const containerSchema = {
     initialObjects: { gameState: SharedMap }
 };
+
 const createNewGame = async () => {
     const { container } = await client.createContainer(containerSchema);
-    (container.initialObjects.gameState as any).set(diceValueKey, 1);
+    const gameState = container.initialObjects.gameState as SharedMap; 
+    gameState.set(GameStateKeys.lastChar, "none");
     const id = await container.attach();
     console.log("Starting game " + id);
-    renderGame(container.initialObjects.gameState);
+    play(gameState);
     return id;
 }
+
 const joinExistingGame = async (id: string) => {
     console.log("Joining game " + id);
     const { container } = await client.getContainer(id, containerSchema);
-    renderGame(container.initialObjects.gameState);
+    play(container.initialObjects.gameState as SharedMap);
 }
-const renderGame = (gameState: any) => {
+
+const play = (gameState: SharedMap) => {
     console.log("render game");
+
+    const stdin = process.stdin;
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding('utf8');
+  
+    stdin.on('data', buffer => {
+      const key = String(buffer);
+
+      // ctrl-c exits game
+      if (key === '\u0003') {
+        console.log('EXIT');
+        process.exit();
+      } else {
+        gameState.set(GameStateKeys.lastChar, key);
+      }
+    });
+
+    gameState.on('valueChanged', () => {
+      console.log("last key pressed: ", gameState.get(GameStateKeys.lastChar));
+    });
 }
+
 const start = async () => {
     const id = process.argv[2];
     if (id) {
