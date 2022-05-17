@@ -4,24 +4,15 @@
 // We could just number cards 0-51 but then we have to use division (instead of bit operations) to get suites and color, and I cannot abide that
 // We could use 0-12 for rank, but it costs us nothing to have a little readability
 
-export type Card = number;
+export type Card = string;
 
-export const cardRank = (card: Card) => card & 0b000001111;
-export const cardSuite = (card: Card) => ((card & 0b000110000) >> 4) as Suite;
-export const cardColor = (card: Card) => ((card & 0b000010000) >> 4) as Color;
-export const cardDeck = (card: Card) => (card & 0b111000000) >> 6;
-
-export enum Suite {
-  Clubs,
-  Diamonds,
-  Spades,
-  Hearts,
-}
-
-export enum Color {
-  Black,
-  Red,
-}
+export const cardRank = (card: Card) => card[2];
+export const cardSuite = (card: Card) => card.slice(1, 2);
+export const cardIsRed = (card: Card) => {
+  const suite = cardSuite(card);
+  return suite === '♦️' || suite === '♥️';
+};
+export const cardDeck = (card: Card) => card[0];
 
 export const suitemoji = ['♣︎', '♦️', '♠️', '♥️'];
 export const rankmoji = [
@@ -34,42 +25,59 @@ export const rankmoji = [
   '7',
   '8',
   '9',
-  '10',
+  'T',
   'J',
   'Q',
   'K',
 ];
 
-export function newCard(name: string, deck?: number): Card;
-export function newCard(rank: number, suite: number, deck?: number): Card;
-export function newCard(...args: [number | string, number?, number?]): Card {
-  return typeof args[0] === 'number'
-    ? args[0] | (args[1]! << 4) | ((args[2] ?? 0) << 6)
-    : (rankmoji.indexOf(args[0].slice(2)) + 1) |
-        (suitemoji.indexOf(args[0].slice(0, 2)) << 4) |
-        ((args[1] ?? 0) << 6);
-}
+export const newShuffledDeck = (deckIndex: number) => {
+  const deck: Card[] = [];
+  suitemoji.forEach(suite => {
+    rankmoji.forEach(rank => {
+      const card: Card = deckIndex + suite + rank;
+      deck.push(card);
+    });
+  });
 
-export function cardName(card: Card): string {
-  return `${suitemoji[cardSuite(card)]}${rankmoji[cardRank(card) - 1]}`;
-}
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
 
-export type Pile = Card[];
+  return deck;
+};
 
-export function topCard(pile: Pile) {
-  const len = pile.length;
-  if (len === 0) throw 'Empty pile';
-  return pile[len - 1];
-}
+// export function newCard(name: string, deck?: number): Card;
+// export function newCard(rank: number, suite: number, deck?: number): Card;
+// export function newCard(...args: [number | string, number?, number?]): Card {
+//   return typeof args[0] === 'number'
+//     ? args[0] | (args[1]! << 4) | ((args[2] ?? 0) << 6)
+//     : (rankmoji.indexOf(args[0].slice(2)) + 1) |
+//         (suitemoji.indexOf(args[0].slice(0, 2)) << 4) |
+//         ((args[1] ?? 0) << 6);
+// }
 
-export function newPile(cards: string[]): Pile;
-export function newPile(cards: string): Pile;
-export function newPile(cards: string | string[]): Pile {
-  return (typeof cards === 'string' ? cards.split('-') : cards).map(card =>
-    newCard(card)
-  );
-}
+// export function cardName(card: Card): string {
+//   return `${suitemoji[cardSuite(card)]}${rankmoji[cardRank(card) - 1]}`;
+// }
 
-export function pileToString(pile: Pile) {
-  return pile.map(cardName).join('-');
-}
+// export type Pile = Card[];
+
+// export function topCard(pile: Pile) {
+//   const len = pile.length;
+//   if (len === 0) throw 'Empty pile';
+//   return pile[len - 1];
+// }
+
+// export function newPile(cards: string[]): Pile;
+// export function newPile(cards: string): Pile;
+// export function newPile(cards: string | string[]): Pile {
+//   return (typeof cards === 'string' ? cards.split('-') : cards).map(card =>
+//     newCard(card)
+//   );
+// }
+
+// export function pileToString(pile: Pile) {
+//   return pile.map(cardName).join('-');
+// }

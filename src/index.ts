@@ -4,6 +4,7 @@ import os from 'os';
 import {SharedMap, SharedString} from 'fluid-framework';
 import {AzureClient} from '@fluidframework/azure-client';
 import {InsecureTokenProvider} from '@fluidframework/test-client-utils';
+import {newShuffledDeck} from './game';
 
 const id = process.env.FR_USER_ID || os.userInfo().username;
 
@@ -35,7 +36,10 @@ const createNewGame = async () => {
   const initialObjects = container.initialObjects as unknown as InitialObjects;
   const containerId = await container.attach();
   console.log('Starting game ' + containerId);
-  initialObjects.pile.insertText(0, 'this is a pile');
+
+  const deck = newShuffledDeck(0);
+  initialObjects.pile.insertText(0, deck.join('-'));
+
   play(initialObjects);
   return containerId;
 };
@@ -48,7 +52,8 @@ const joinExistingGame = async (containerId: string) => {
 };
 
 const play = ({gameState, pile}: InitialObjects) => {
-  for (const [key, value] of gameState) {
+  console.log(pile.getText());
+  for (const [key, value] of gameState.entries()) {
     console.log(key, value);
   }
 
@@ -72,7 +77,7 @@ const play = ({gameState, pile}: InitialObjects) => {
 
   gameState.on('valueChanged', ivc => {
     console.clear();
-    console.log(pile);
+    console.log(pile.getText());
     for (const [key, value] of gameState.entries()) {
       console.log((ivc.key === key ? '*' : '') + key, value);
     }
