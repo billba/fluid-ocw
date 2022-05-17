@@ -11,6 +11,9 @@
   "license": "MIT",
   "description": "",
   "dependencies": {
+    "@fluidframework/azure-client": "^0.59.2001",
+    "@fluidframework/test-client-utils": "^0.59.2001",
+    "dotenv": "^16.0.1",
     "fluid-framework": "^0.59.2001",
     "typescript": "^4.6.4"
   }

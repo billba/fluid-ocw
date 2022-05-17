@@ -1,4 +1,25 @@
-import { SharedMap } from "fluid-framework";
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+// import { SharedMap } from "fluid-framework";
+
+import {AzureClient} from '@fluidframework/azure-client';
+import {InsecureTokenProvider} from '@fluidframework/test-client-utils';
+
+const serviceConfig = {
+  connection: {
+    tenantId: process.env.FR_TENANT || "", // REPLACE WITH YOUR TENANT ID
+    tokenProvider: new InsecureTokenProvider(
+        process.env.FR_PRIMARY_KEY || "", // workaround for type string
+      {id: 'userId'}
+    ),
+    orderer: process.env.FR_ORDERER || "", // REPLACE WITH YOUR ORDERER ENDPOINT
+    storage: process.env.FR_STORAGE || "", // REPLACE WITH YOUR STORAGE ENDPOINT
+  },
+};
+
+const client = new AzureClient(serviceConfig);
+
 
 // const diceValueKey = "dice-value-key";
 // const client = new TinyliciousClient();
