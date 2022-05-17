@@ -65,7 +65,7 @@ const play = (gameState: SharedMap) => {
     }
   });
 
-  gameState.on('valueChanged', (ivc) => {
+  gameState.on('valueChanged', ivc => {
     console.clear();
     for (const [key, value] of gameState.entries()) {
       console.log((ivc.key === key ? '*' : '') + key, value);
