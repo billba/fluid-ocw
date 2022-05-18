@@ -1,4 +1,4 @@
- export type Card = string;
+export type Card = string;
 
 export function cardFields(card: Card) {
   const suite = card.slice(1, 2);
@@ -7,7 +7,7 @@ export function cardFields(card: Card) {
     rank: card[3],
     isRed: suite === '♦️' || suite === '♥️',
     deck: card[0],
-  }
+  };
 }
 
 export const suitemoji = ['♣︎', '♦️', '♠️', '♥️'];
@@ -28,7 +28,10 @@ export const rankmoji = [
 ];
 
 export function compareRanks(rankA: string, rankB: string) {
-  return Math.max(-1, Math.min(1, rankmoji.indexOf(rankA) - rankmoji.indexOf(rankB)));
+  return Math.max(
+    -1,
+    Math.min(1, rankmoji.indexOf(rankA) - rankmoji.indexOf(rankB))
+  );
 }
 
 export type Pile = String;
@@ -37,9 +40,9 @@ export function isEmptyPile(pile: Pile) {
   return pile.length === 0;
 }
 
-export function topCard(pile:Pile) {
+export function topCard(pile: Pile) {
   if (isEmptyPile(pile)) throw 'Empty pile';
-  return pile.slice(0,4);
+  return pile.slice(0, 4);
 }
 
 export function bottomCard(pile: Pile) {
@@ -48,7 +51,10 @@ export function bottomCard(pile: Pile) {
 }
 
 export function pileWithoutDeck(pile: Pile) {
-  return pile.split('-').map(card => card.slice(-3)).join('-');
+  return pile
+    .split('-')
+    .map(card => card.slice(-3))
+    .join('-');
 }
 
 export const newShuffledDeck = (deckIndex: number) => {
