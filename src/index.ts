@@ -1,7 +1,8 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 import os from 'os';
-import {SharedMap, SharedString, SharedSequence, ContainerSchema} from 'fluid-framework';
+import {SharedMap, SharedString, ContainerSchema} from 'fluid-framework';
+import {SharedObjectSequence} from '@fluidframework/sequence';
 import {AzureClient} from '@fluidframework/azure-client';
 import {InsecureTokenProvider} from '@fluidframework/test-client-utils';
 // import {Card, newShuffledDeck} from './game';
@@ -53,7 +54,7 @@ const containerSchema: ContainerSchema = {
   initialObjects: {
     gameState: SharedMap,
   },
-  dynamicObjectTypes: [SharedString],
+  dynamicObjectTypes: [SharedString, SharedObjectSequence],
 };
 
 const createNewGame = async () => {
@@ -64,7 +65,16 @@ const createNewGame = async () => {
 
   const text = await container.create(SharedString);
   text.insertText(0, 'starting text');
-  initialObjects.gameState.set("text", text.handle);
+  initialObjects.gameState.set('text', text.handle);
+
+  const cardSequence = (await container.create(
+    SharedObjectSequence
+  )) as unknown as SharedObjectSequence<Card>;
+  cardSequence.insert(0, [
+    {player: id, rank: 3, suit: 2},
+    {player: id, rank: 8, suit: 2},
+  ]);
+  initialObjects.gameState.set('my-pile', cardSequence.handle);
 
   await play(initialObjects);
   return containerId;
@@ -78,10 +88,16 @@ const joinExistingGame = async (containerId: string) => {
 };
 
 const play = async ({gameState}: InitialObjects) => {
-  const handle = gameState.get("text");
-  const sharedString:SharedString = await handle.get();
+  const handle = gameState.get('text');
+  const sharedString: SharedString = await handle.get();
   const text = sharedString.getText();
   console.log(text);
+
+  const cardSequence: SharedObjectSequence<Card> = await gameState
+    .get('my-pile')
+    .get();
+  const cards = cardSequence.getItems(0);
+  console.log(cards);
 
   const stdin = process.stdin;
   stdin.setRawMode(true);
@@ -97,23 +113,23 @@ const play = async ({gameState}: InitialObjects) => {
       // eslint-disable-next-line no-process-exit
       process.exit();
     } else {
-      console.log("I got this far");
-      const handle = gameState.get("text");
-      const sharedString:SharedString = await handle.get();
+      console.log('I got this far');
+      const handle = gameState.get('text');
+      const sharedString: SharedString = await handle.get();
       sharedString.replaceText(0, sharedString.getLength(), id);
       console.log(sharedString.getText());
     }
   });
 
   sharedString.on('sequenceDelta', () => {
-    console.log("string changed");
+    console.log('string changed');
   });
 
-  gameState.on('valueChanged', (ivc) => {
-    console.log("map changed");
+  gameState.on('valueChanged', ivc => {
+    console.log('map changed');
 
-    if (ivc.key === "text") {
-      console.log("text changed");
+    if (ivc.key === 'text') {
+      console.log('text changed');
     }
     // console.clear();
 
@@ -135,5 +151,3 @@ const start = async () => {
 };
 
 start();
-
-
