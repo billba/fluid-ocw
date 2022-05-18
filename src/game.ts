@@ -6,13 +6,15 @@
 
 export type Card = string;
 
-export const cardRank = (card: Card) => card[2];
-export const cardSuite = (card: Card) => card.slice(1, 2);
-export const cardIsRed = (card: Card) => {
-  const suite = cardSuite(card);
-  return suite === '♦️' || suite === '♥️';
-};
-export const cardDeck = (card: Card) => card[0];
+export function cardFields(card: Card) {
+  const suite = card.slice(1, 2);
+  return {
+    suite,
+    rank: card[3],
+    isRed: suite === '♦️' || suite === '♥️',
+    deck: card[0],
+  }
+}
 
 export const suitemoji = ['♣︎', '♦️', '♠️', '♥️'];
 export const rankmoji = [
@@ -31,6 +33,30 @@ export const rankmoji = [
   'K',
 ];
 
+export function compareRanks(rankA: string, rankB: string) {
+  return Math.max(-1, Math.min(1, rankmoji.indexOf(rankA) - rankmoji.indexOf(rankB)));
+}
+
+export type Pile = String;
+
+export function isEmptyPile(pile: Pile) {
+  return pile.length === 0;
+}
+
+export function topCard(pile:Pile) {
+  if (isEmptyPile(pile)) throw 'Empty pile';
+  return pile.slice(0,4);
+}
+
+export function bottomCard(pile: Pile) {
+  if (isEmptyPile(pile)) throw 'Empty pile';
+  return pile.slice(-4);
+}
+
+export function pileWithoutDeck(pile: Pile) {
+  return pile.split('-').map(card => card.slice(-3)).join('-');
+}
+
 export const newShuffledDeck = (deckIndex: number) => {
   const deck: Card[] = [];
   suitemoji.forEach(suite => {
@@ -45,39 +71,5 @@ export const newShuffledDeck = (deckIndex: number) => {
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
 
-  return deck;
+  return deck.join('-');
 };
-
-// export function newCard(name: string, deck?: number): Card;
-// export function newCard(rank: number, suite: number, deck?: number): Card;
-// export function newCard(...args: [number | string, number?, number?]): Card {
-//   return typeof args[0] === 'number'
-//     ? args[0] | (args[1]! << 4) | ((args[2] ?? 0) << 6)
-//     : (rankmoji.indexOf(args[0].slice(2)) + 1) |
-//         (suitemoji.indexOf(args[0].slice(0, 2)) << 4) |
-//         ((args[1] ?? 0) << 6);
-// }
-
-// export function cardName(card: Card): string {
-//   return `${suitemoji[cardSuite(card)]}${rankmoji[cardRank(card) - 1]}`;
-// }
-
-// export type Pile = Card[];
-
-// export function topCard(pile: Pile) {
-//   const len = pile.length;
-//   if (len === 0) throw 'Empty pile';
-//   return pile[len - 1];
-// }
-
-// export function newPile(cards: string[]): Pile;
-// export function newPile(cards: string): Pile;
-// export function newPile(cards: string | string[]): Pile {
-//   return (typeof cards === 'string' ? cards.split('-') : cards).map(card =>
-//     newCard(card)
-//   );
-// }
-
-// export function pileToString(pile: Pile) {
-//   return pile.map(cardName).join('-');
-// }

@@ -37,8 +37,7 @@ const createNewGame = async () => {
   const containerId = await container.attach();
   console.log('Starting game ' + containerId);
 
-  const deck = newShuffledDeck(0);
-  initialObjects.pile.insertText(0, deck.join('-'));
+  initialObjects.pile.insertText(0, newShuffledDeck(0));
 
   play(initialObjects);
   return containerId;
