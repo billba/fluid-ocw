@@ -29,11 +29,11 @@ export interface Card {
 }
 
 export function cardToString(
-  {suit, rank, playerId: player}: Card,
+  {suit, rank, playerId}: Card,
   showPlayer = true
 ) {
   return (
-    (showPlayer ? player + '-' : '') + suitmoji[suit] + '-' + rankmoji[rank]
+    (showPlayer ? playerId + '-' : '') + suitmoji[suit] + '-' + rankmoji[rank]
   );
 }
 
