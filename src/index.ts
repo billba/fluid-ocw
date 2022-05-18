@@ -1,10 +1,16 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 import os from 'os';
-import {SharedMap, SharedString} from 'fluid-framework';
+import {SharedMap, SharedString, SharedSequence, ContainerSchema} from 'fluid-framework';
 import {AzureClient} from '@fluidframework/azure-client';
 import {InsecureTokenProvider} from '@fluidframework/test-client-utils';
-import {newShuffledDeck} from './game';
+// import {Card, newShuffledDeck} from './game';
+
+interface Card {
+  suit: number;
+  rank: number;
+  player: string;
+}
 
 const id = process.env.FR_USER_ID || os.userInfo().username;
 
@@ -19,16 +25,35 @@ const serviceConfig = {
 
 const client = new AzureClient(serviceConfig);
 
+/*
+
 interface InitialObjects {
-  pile: SharedString;
+  gameState: SharedMap {
+    acePiles: SharedSequence<SharedSequence<Card>>,
+    players: SharedMap {
+      [playerName]: SharedMap {
+        workPiles: SharedSequence<SharedSequence<Card>>
+        draw: SharedSequence<Card>,
+        drawDiscard: SharedSequence<Card>,
+        nerds: SharedSequence<Card>,
+        nerdsDiscard: SharedSequence<Card>,
+      }
+    }
+  }
+
+}
+
+*/
+
+interface InitialObjects {
   gameState: SharedMap;
 }
 
-const containerSchema = {
+const containerSchema: ContainerSchema = {
   initialObjects: {
-    pile: SharedString,
     gameState: SharedMap,
   },
+  dynamicObjectTypes: [SharedString],
 };
 
 const createNewGame = async () => {
@@ -37,9 +62,11 @@ const createNewGame = async () => {
   const containerId = await container.attach();
   console.log('Starting game ' + containerId);
 
-  initialObjects.pile.insertText(0, newShuffledDeck(0));
+  const text = await container.create(SharedString);
+  text.insertText(0, 'starting text');
+  initialObjects.gameState.set("text", text.handle);
 
-  play(initialObjects);
+  await play(initialObjects);
   return containerId;
 };
 
@@ -47,21 +74,21 @@ const joinExistingGame = async (containerId: string) => {
   console.log('Joining game ' + containerId);
   const {container} = await client.getContainer(containerId, containerSchema);
   const initialObjects = container.initialObjects as unknown as InitialObjects;
-  play(initialObjects);
+  await play(initialObjects);
 };
 
-const play = ({gameState, pile}: InitialObjects) => {
-  console.log(pile.getText());
-  for (const [key, value] of gameState.entries()) {
-    console.log(key, value);
-  }
+const play = async ({gameState}: InitialObjects) => {
+  const handle = gameState.get("text");
+  const sharedString:SharedString = await handle.get();
+  const text = sharedString.getText();
+  console.log(text);
 
   const stdin = process.stdin;
   stdin.setRawMode(true);
   stdin.resume();
   stdin.setEncoding('utf8');
 
-  stdin.on('data', buffer => {
+  stdin.on('data', async buffer => {
     const key = String(buffer);
 
     // ctrl-c exits game
@@ -70,16 +97,31 @@ const play = ({gameState, pile}: InitialObjects) => {
       // eslint-disable-next-line no-process-exit
       process.exit();
     } else {
-      gameState.set(id, key);
+      console.log("I got this far");
+      const handle = gameState.get("text");
+      const sharedString:SharedString = await handle.get();
+      sharedString.replaceText(0, sharedString.getLength(), id);
+      console.log(sharedString.getText());
     }
   });
 
-  gameState.on('valueChanged', ivc => {
-    console.clear();
-    console.log(pile.getText());
-    for (const [key, value] of gameState.entries()) {
-      console.log((ivc.key === key ? '*' : '') + key, value);
+  sharedString.on('sequenceDelta', () => {
+    console.log("string changed");
+  });
+
+  gameState.on('valueChanged', (ivc) => {
+    console.log("map changed");
+
+    if (ivc.key === "text") {
+      console.log("text changed");
     }
+    // console.clear();
+
+    // const handle = gameState.get("text");
+    // const sharedString:SharedString = await handle.get();
+    // const text = sharedString.getText();
+
+    // console.log(text);
   });
 };
 
@@ -93,3 +135,5 @@ const start = async () => {
 };
 
 start();
+
+

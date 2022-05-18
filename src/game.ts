@@ -1,4 +1,4 @@
-export type Card = string;
+ export type Card = string;
 
 export function cardFields(card: Card) {
   const suite = card.slice(1, 2);
