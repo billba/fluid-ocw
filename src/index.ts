@@ -1,11 +1,15 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 import os from 'os';
-import {SharedMap, SharedString, ContainerSchema} from 'fluid-framework';
+import {
+  SharedMap,
+  SharedString,
+  ContainerSchema,
+  IFluidContainer,
+} from 'fluid-framework';
 import {SharedObjectSequence} from '@fluidframework/sequence';
 import {AzureClient} from '@fluidframework/azure-client';
 import {InsecureTokenProvider} from '@fluidframework/test-client-utils';
-// import {Card, newShuffledDeck} from './game';
 
 interface Card {
   suit: number;
@@ -13,12 +17,14 @@ interface Card {
   player: string;
 }
 
-const id = process.env.FR_USER_ID || os.userInfo().username;
+const playerId = process.env.FR_USER_ID || os.userInfo().username;
 
 const serviceConfig = {
   connection: {
     tenantId: process.env.FR_TENANT!,
-    tokenProvider: new InsecureTokenProvider(process.env.FR_PRIMARY_KEY!, {id}),
+    tokenProvider: new InsecureTokenProvider(process.env.FR_PRIMARY_KEY!, {
+      id: playerId,
+    }),
     orderer: process.env.FR_ORDERER!,
     storage: process.env.FR_STORAGE!,
   },
@@ -29,76 +35,65 @@ const client = new AzureClient(serviceConfig);
 /*
 
 interface InitialObjects {
-  gameState: SharedMap {
-    acePiles: SharedSequence<SharedSequence<Card>>,
-    players: SharedMap {
-      [playerName]: SharedMap {
-        workPiles: SharedSequence<SharedSequence<Card>>
-        draw: SharedSequence<Card>,
-        drawDiscard: SharedSequence<Card>,
-        nerds: SharedSequence<Card>,
-        nerdsDiscard: SharedSequence<Card>,
-      }
+  acePiles: SharedSequence<SharedSequence<Card>>,
+  players: SharedMap {
+    [playerName]: SharedMap {
+      workPiles: SharedSequence<SharedSequence<Card>>
+      draw: SharedSequence<Card>,
+      drawDiscard: SharedSequence<Card>,
+      nerds: SharedSequence<Card>,
+      nerdsDiscard: SharedSequence<Card>,
     }
   }
-
 }
 
 */
 
 interface InitialObjects {
-  gameState: SharedMap;
+  acePiles: SharedObjectSequence<SharedObjectSequence<Card>>;
+  players: SharedMap;
 }
 
 const containerSchema: ContainerSchema = {
   initialObjects: {
-    gameState: SharedMap,
+    acePiles: SharedObjectSequence,
+    players: SharedMap,
   },
   dynamicObjectTypes: [SharedString, SharedObjectSequence],
 };
 
-const createNewGame = async () => {
+const createNewGame = async (playerId: string) => {
   const {container} = await client.createContainer(containerSchema);
   const initialObjects = container.initialObjects as unknown as InitialObjects;
   const containerId = await container.attach();
   console.log('Starting game ' + containerId);
-
-  const text = await container.create(SharedString);
-  text.insertText(0, 'starting text');
-  initialObjects.gameState.set('text', text.handle);
-
-  const cardSequence = (await container.create(
-    SharedObjectSequence
-  )) as unknown as SharedObjectSequence<Card>;
-  cardSequence.insert(0, [
-    {player: id, rank: 3, suit: 2},
-    {player: id, rank: 8, suit: 2},
-  ]);
-  initialObjects.gameState.set('my-pile', cardSequence.handle);
-
+  initializePlayer(playerId, container);
   await play(initialObjects);
   return containerId;
 };
 
-const joinExistingGame = async (containerId: string) => {
+const joinExistingGame = async (playerId: string, containerId: string) => {
   console.log('Joining game ' + containerId);
   const {container} = await client.getContainer(containerId, containerSchema);
   const initialObjects = container.initialObjects as unknown as InitialObjects;
+  initializePlayer(playerId, container);
   await play(initialObjects);
 };
 
-const play = async ({gameState}: InitialObjects) => {
-  const handle = gameState.get('text');
-  const sharedString: SharedString = await handle.get();
-  const text = sharedString.getText();
-  console.log(text);
+const initializePlayer = async (
+  playerId: string,
+  container: IFluidContainer
+) => {
+  const playerMap = await container.create(SharedMap);
+  playerMap.set('playerId', playerId);
 
-  const cardSequence: SharedObjectSequence<Card> = await gameState
-    .get('my-pile')
-    .get();
-  const cards = cardSequence.getItems(0);
-  console.log(cards);
+  const initialObjects = container.initialObjects as unknown as InitialObjects;
+  initialObjects.players.set(playerId, playerMap.handle);
 
+  // TODO: set all the piles
+};
+
+const play = async ({acePiles, players}: InitialObjects) => {
   const stdin = process.stdin;
   stdin.setRawMode(true);
   stdin.resume();
@@ -113,40 +108,17 @@ const play = async ({gameState}: InitialObjects) => {
       // eslint-disable-next-line no-process-exit
       process.exit();
     } else {
-      console.log('I got this far');
-      const handle = gameState.get('text');
-      const sharedString: SharedString = await handle.get();
-      sharedString.replaceText(0, sharedString.getLength(), id);
-      console.log(sharedString.getText());
+      console.log(key);
     }
-  });
-
-  sharedString.on('sequenceDelta', () => {
-    console.log('string changed');
-  });
-
-  gameState.on('valueChanged', ivc => {
-    console.log('map changed');
-
-    if (ivc.key === 'text') {
-      console.log('text changed');
-    }
-    // console.clear();
-
-    // const handle = gameState.get("text");
-    // const sharedString:SharedString = await handle.get();
-    // const text = sharedString.getText();
-
-    // console.log(text);
   });
 };
 
 const start = async () => {
   const containerId = process.argv[2];
   if (containerId) {
-    await joinExistingGame(containerId);
+    await joinExistingGame(playerId, containerId);
   } else {
-    await createNewGame();
+    await createNewGame(playerId);
   }
 };
 
