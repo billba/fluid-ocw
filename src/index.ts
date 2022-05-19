@@ -11,11 +11,13 @@ import {SharedObjectSequence} from '@fluidframework/sequence';
 import {AzureClient} from '@fluidframework/azure-client';
 import {InsecureTokenProvider} from '@fluidframework/test-client-utils';
 
-interface Card {
-  suit: number;
-  rank: number;
-  player: string;
-}
+import {Card, newShuffledDeck, pileToString} from './game';
+
+// interface Card {
+//   suit: number;
+//   rank: number;
+//   player: string;
+// }
 
 const playerId = process.env.FR_USER_ID || os.userInfo().username;
 
@@ -38,6 +40,7 @@ interface InitialObjects {
   acePiles: SharedSequence<SharedSequence<Card>>,
   players: SharedMap {
     [playerName]: SharedMap {
+      playerId: SharedString,
       workPiles: SharedSequence<SharedSequence<Card>>
       draw: SharedSequence<Card>,
       drawDiscard: SharedSequence<Card>,
@@ -63,37 +66,65 @@ const containerSchema: ContainerSchema = {
 };
 
 const createNewGame = async (playerId: string) => {
+  playerId = 'mhop';
+  // Create the game session
   const {container} = await client.createContainer(containerSchema);
-  const initialObjects = container.initialObjects as unknown as InitialObjects;
   const containerId = await container.attach();
   console.log('Starting game ' + containerId);
-  initializePlayer(playerId, container);
-  await play(initialObjects);
-  return containerId;
+
+  // Add our player
+  await addPlayer(playerId, container);
+
+  // Start playing
+  await play(container);
 };
 
 const joinExistingGame = async (playerId: string, containerId: string) => {
   console.log('Joining game ' + containerId);
   const {container} = await client.getContainer(containerId, containerSchema);
-  const initialObjects = container.initialObjects as unknown as InitialObjects;
-  initializePlayer(playerId, container);
-  await play(initialObjects);
+
+  // Add our player
+  await addPlayer(playerId, container);
+
+  // Start playing
+  await play(container);
 };
 
-const initializePlayer = async (
-  playerId: string,
-  container: IFluidContainer
-) => {
-  const playerMap = await container.create(SharedMap);
-  playerMap.set('playerId', playerId);
+enum PlayerFields {
+  draw = 'draw',
+  id = 'playerId',
+  nerds = 'nerds',
+}
+
+const addPlayer = async (playerId: string, container: IFluidContainer) => {
+  const playerObject = await container.create(SharedMap);
+  playerObject.set(PlayerFields.id, playerId);
+  playerObject.set(PlayerFields.draw, newShuffledDeck(playerId));
 
   const initialObjects = container.initialObjects as unknown as InitialObjects;
-  initialObjects.players.set(playerId, playerMap.handle);
+  initialObjects.players.set(playerId, playerObject.handle);
 
   // TODO: set all the piles
 };
 
-const play = async ({acePiles, players}: InitialObjects) => {
+async function printWorld(container: IFluidContainer) {
+  // Print players
+  const initialObjects = container.initialObjects as unknown as InitialObjects;
+  for (const [playerId, anyObject] of initialObjects.players.entries()) {
+    const playerObject = (await anyObject.get()) as SharedMap;
+    const deck1 = playerObject.get(PlayerFields.draw);
+    // const deck2 = (await deck1.get()) as SharedObjectSequence<Card>;
+    // const deck3 = deck2.getItems(0);
+
+    console.log(playerId);
+    console.log('  ' + pileToString(deck1));
+  }
+}
+
+const play = async (container: IFluidContainer) => {
+  // const initialObjects = container.initialObjects as unknown as InitialObjects;
+  // const {acePiles, players} = initialObjects;
+
   const stdin = process.stdin;
   stdin.setRawMode(true);
   stdin.resume();
@@ -111,6 +142,8 @@ const play = async ({acePiles, players}: InitialObjects) => {
       console.log(key);
     }
   });
+
+  printWorld(container);
 };
 
 const start = async () => {

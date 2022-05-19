@@ -1,16 +1,11 @@
-export type Card = string;
-
-export function cardFields(card: Card) {
-  const suite = card.slice(1, 2);
-  return {
-    suite,
-    rank: card[3],
-    isRed: suite === '♦️' || suite === '♥️',
-    deck: card[0],
-  };
+export enum Suit {
+  Clubs,
+  Diamonds,
+  Spades,
+  Hearts,
 }
 
-export const suitemoji = ['♣︎', '♦️', '♠️', '♥️'];
+export const suitmoji = ['♣︎', '♦️', '♠️', '♥️'];
 export const rankmoji = [
   'A',
   '2',
@@ -27,14 +22,27 @@ export const rankmoji = [
   'K',
 ];
 
-export function compareRanks(rankA: string, rankB: string) {
-  return Math.max(
-    -1,
-    Math.min(1, rankmoji.indexOf(rankA) - rankmoji.indexOf(rankB))
+export interface Card {
+  suit: number;
+  rank: number;
+  playerId: string;
+}
+
+export function cardToString({suit, rank, playerId}: Card, showPlayer = true) {
+  return (
+    (showPlayer ? playerId + '-' : '') + suitmoji[suit] + '-' + rankmoji[rank]
   );
 }
 
-export type Pile = String;
+type Pile = Card[];
+
+export function pileToString(pile: Card[], showPlayer = true) {
+  return pile.map(card => cardToString(card, showPlayer)).join(' ');
+}
+
+export function isRed({suit}: Card) {
+  return suit === Suit.Diamonds || suit === Suit.Hearts;
+}
 
 export function isEmptyPile(pile: Pile) {
   return pile.length === 0;
@@ -42,34 +50,26 @@ export function isEmptyPile(pile: Pile) {
 
 export function topCard(pile: Pile) {
   if (isEmptyPile(pile)) throw 'Empty pile';
-  return pile.slice(0, 4);
+  return pile[pile.length - 1];
 }
 
 export function bottomCard(pile: Pile) {
   if (isEmptyPile(pile)) throw 'Empty pile';
-  return pile.slice(-4);
+  return pile[0];
 }
 
-export function pileWithoutDeck(pile: Pile) {
-  return pile
-    .split('-')
-    .map(card => card.slice(-3))
-    .join('-');
-}
-
-export const newShuffledDeck = (deckIndex: number) => {
+export const newShuffledDeck = (playerId: string) => {
   const deck: Card[] = [];
-  suitemoji.forEach(suite => {
-    rankmoji.forEach(rank => {
-      const card: Card = deckIndex + suite + rank;
-      deck.push(card);
-    });
-  });
+  for (let suit = Suit.Clubs; suit <= Suit.Spades; suit++) {
+    for (let rank = 0; rank < 13; rank++) {
+      deck.push({playerId, rank, suit});
+    }
+  }
 
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
 
-  return deck.join('-');
+  return deck;
 };
